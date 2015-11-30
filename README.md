@@ -76,6 +76,23 @@ class License extends AModel
     }
 ```
 
+Если в выборке необходимо использовать дополнительные условия, то для этого есть метод getExtraCondition(). Пример:
+```php
+    public function getExtraCondition($params)
+    {
+        $condition = array();
+        $table_name = $this->getTableName();
+
+        if ($this->_area == 'C') {
+            $condition[] = db_quote("$table_name.user_id = ?i", $this->_auth['user_id']);
+        } elseif ($company_id = Registry::get('runtime.company_id')) {
+            $condition[] = db_quote("$table_name.company_id = ?i", $company_id);
+        }
+
+        return $condition;
+    }
+```
+
 Если мы используем таблицу без автоинкрементного поля, то нужно в модели переопределить метод _primaryAutoIncrement, таким образом, чтобы он возвращал false:
 ```php
     protected function _primaryAutoIncrement()
@@ -269,14 +286,14 @@ Registry::get('view')->assign('search', $search);
 ## Обработчики
 
 #### Чтение:
-beforeFind()
-afterFind()
+- beforeFind();
+- afterFind();
 
 #### Сохранение:
-beforeSave()
-afterSave()
+- beforeSave();
+- afterSave();
 
 #### Удаление:
-beforeDelete()
-afterDelete()
+- beforeDelete();
+- afterDelete();
 
