@@ -17,17 +17,15 @@ namespace Tygh\Models\Components;
 class Fields extends AComponent
 {
 
-    protected $_result;
-
-    protected function _prepare()
+    protected function prepare()
     {
-        $this->_result = $this->_model->getFields($this->_params);
+        $this->result = $this->model->getFields($this->params);
     }
 
     public function get()
     {
-        if (!empty($this->_result)) {
-            return implode(', ', $this->_result);
+        if (!empty($this->result)) {
+            return implode(', ', $this->result);
         }
 
         return '';

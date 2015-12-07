@@ -14,6 +14,7 @@
 
 namespace Tygh\Models;
 
+use Tygh\Languages\Languages;
 use Tygh\Models\Components\Fields;
 use Tygh\Models\Components\Sorting;
 use Tygh\Models\Components\Joins;
@@ -24,44 +25,36 @@ use Tygh\Navigation\LastView;
 abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 {
 
-    protected static $_models = array();
+    protected static $models = array();
 
-    protected $_id;
-    protected $_attributes = array();
+    protected $id;
 
-    protected $_auth;
-    protected $_area;
-    protected $_lang_code;
-    protected $_error;
+    protected $attributes = array();
+
+    protected $params = array();
 
     protected static $_enum_elements = array();
 
     public function __construct($params = array(), $attributes = array())
     {
-        $params = array_merge(array(
-            'auth' => & $_SESSION['auth'],
-            'area' => AREA,
+        $this->params = array_merge(array(
             'lang_code' => CART_LANGUAGE,
         ), $params);
 
-        $this->_auth = $params['auth'];
-        $this->_area = $params['area'];
-        $this->_lang_code = $params['lang_code'];
-
         if (!empty($attributes)) {
-            $this->_load($attributes);
+            $this->load($attributes);
         }
     }
 
     public function __set($name, $value)
     {
-        $this->_attributes[$name] = $value;
+        $this->attributes[$name] = $value;
     }
 
     public function __get($name)
     {
-        if (isset($this->_attributes[$name])) {
-            return $this->_attributes[$name];
+        if (isset($this->attributes[$name])) {
+            return $this->attributes[$name];
         }
 
         return null;
@@ -69,12 +62,12 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
     public function __isset($name)
     {
-        return isset($this->_attributes[$name]);
+        return isset($this->attributes[$name]);
     }
 
     public function __unset($name)
     {
-        unset($this->_attributes[$name]);
+        unset($this->attributes[$name]);
     }
 
     /**
@@ -131,32 +124,25 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
      */
     public function getIterator()
     {
-        return new Iterator($this->_attributes);
+        return new Iterator($this->attributes);
     }
 
     public static function model($params = array())
     {
         $class = get_called_class();
 
-        if (!isset(static::$_models[$class])) {
-            static::$_models[$class] = new static($params);
+        if (!isset(static::$models[$class])) {
+            static::$models[$class] = new static($params);
         }
 
-        return static::$_models[$class];
-    }
-
-    public function setAuth(&$auth)
-    {
-        $this->_auth = &$auth;
+        return static::$models[$class];
     }
 
     public function findMany($params = array())
     {
-        $this->beforeFind();
+        $this->beforeFind($params);
 
-        $params = array_merge(array(
-            'lang_code' => $this->_lang_code,
-        ), $params);
+        $params = array_merge($this->params, $params);
 
         // Init filter
         if ($last_view_object_name = $this->getLastViewObjectName()) {
@@ -167,7 +153,10 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         $sorting   = new   Sorting($this, $params);
         $joins     = new     Joins($this, $params);
         $condition = new Condition($this, $params, $joins);
-        $limit     = new     Limit($this, $params, $joins, $condition);
+
+        $this->prepareQuery($params, $fields->result, $sorting->result, $joins->result, $condition->result);
+
+        $limit = new Limit($this, $params, $joins, $condition);
 
         if (!empty($params['get_count']) && isset($params['total_items'])) {
             return $params['total_items'];
@@ -187,12 +176,12 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
         $items = db_get_array("SELECT " . $fields->get() . $query_foundation);
 
-        $this->_gatherAdditionalItemsData($items, $params);
+        $this->gatherAdditionalItemsData($items, $params);
 
         if (!empty($params['to_array'])) {
             $models = $items;
         } else {
-            $models = $this->_loadMany($items, true);
+            $models = $this->loadMany($items, true);
         }
 
         if (!empty($params['return_params'])) {
@@ -233,21 +222,21 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
             }
 
             if (is_array($attributes)) {
-                $this->_attributes = array_merge($this->_attributes, $attributes);
+                $this->attributes = array_merge($this->attributes, $attributes);
             }
         }
 
-        return $this->_attributes;
+        return $this->attributes;
     }
 
     public function save()
     {
         if ($this->beforeSave()) {
-            $result = $this->isNewRecord() ? $this->_insert() : $this->_update();
+            $result = $this->isNewRecord() ? $this->insert() : $this->update();
 
             $this->unlockTables();
 
-            $this->_load($this->find($this->_id));
+            $this->load($this->find($this->id));
 
             $this->afterSave();
 
@@ -269,18 +258,18 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
             $is_deleted = db_query(
                 sprintf('DELETE FROM %s WHERE %s = ?s', $table_name, $primary_field),
-                $this->_id
+                $this->id
             );
 
             if ($is_deleted && !empty($description_table_name)) {
                 $is_deleted = db_query(
                     sprintf("DELETE FROM %s WHERE %s = ?s", $description_table_name, $primary_field),
-                    $this->_id
+                    $this->id
                 );
             }
 
             if ($is_deleted) {
-                $this->_id = null;
+                $this->id = null;
                 $this->afterDelete();
             }
         }
@@ -299,48 +288,48 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return true;
     }
 
-    protected function _insert()
+    protected function insert()
     {
         $table_name = $this->getTableName();
         $description_table_name = $this->getDescriptionTableName();
         $primary_field = $this->getPrimaryField();
 
-        $_data = $this->_prepareAttributes();
+        $_data = $this->prepareAttributes();
 
         $result = db_query("INSERT INTO $table_name ?e", $_data);
         
-        if ($this->_primaryAutoIncrement()) {
-            $this->_id = $result;
+        if ($this->primaryAutoIncrement()) {
+            $this->id = $result;
         } else {
-            $this->_id = $this->{$primary_field};
+            $this->id = $this->{$primary_field};
         }
 
         if (!empty($description_table_name)) {
-            $_data[$primary_field] = $this->_id;
-            foreach (fn_get_translation_languages() as $_data['lang_code'] => $v) {
+            $_data[$primary_field] = $this->id;
+            foreach (Languages::getAll() as $_data['lang_code'] => $v) {
                 db_query("INSERT INTO $description_table_name ?e", $_data);
             }
         }
 
-        $this->{$primary_field} = $this->_id;
+        $this->{$primary_field} = $this->id;
 
         return true;
     }
 
-    protected function _update()
+    protected function update()
     {
         $table_name = $this->getTableName();
         $primary_field = $this->getPrimaryField();
         $description_table_name = $this->getDescriptionTableName();
 
-        $_data = $this->_prepareAttributes();
+        $_data = $this->prepareAttributes();
 
-        db_query("UPDATE $table_name SET ?u WHERE $primary_field = ?s", $_data, $this->_id);
+        db_query("UPDATE $table_name SET ?u WHERE $primary_field = ?s", $_data, $this->id);
 
         if (!empty($description_table_name)) {
             db_query(
                 "UPDATE $description_table_name SET ?u WHERE $primary_field = ?s AND lang_code = ?s",
-                $_data, $this->_id, $this->_lang_code
+                $_data, $this->id, $this->params['lang_code']
             );
         }
 
@@ -349,7 +338,7 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
     public function isNewRecord()
     {
-        return empty($this->_id);
+        return empty($this->id);
     }
 
     public function getFields($params)
@@ -359,11 +348,11 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         );
     }
 
-    protected function _prepareAttributes()
+    protected function prepareAttributes()
     {
-        $attributes = $this->_attributes;
+        $attributes = $this->attributes;
 
-        if ($this->_primaryAutoIncrement()) {
+        if ($this->primaryAutoIncrement()) {
             if (isset($attributes[$this->getPrimaryField()])) {
                 unset($attributes[$this->getPrimaryField()]);
             }
@@ -372,12 +361,12 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return $attributes;
     }
 
-    protected function _load($attributes, $find = false)
+    protected function load($attributes, $find = false)
     {
         $primary_field = $this->getPrimaryField();
 
         if (isset($attributes[$primary_field])) {
-            $this->_id = $attributes[$primary_field];
+            $this->id = $attributes[$primary_field];
         }
 
         $this->attributes($attributes);
@@ -387,17 +376,15 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         }
     }
 
-    protected function _loadMany($items, $find = false)
+    protected function loadMany($items, $find = false)
     {
         $models = array();
 
         foreach ($items as $item) {
             $model = new static(array(
-                'auth' => $this->_auth,
-                'area' => $this->_area,
-                'lang_code' => $this->_lang_code,
+                'lang_code' => $this->params['lang_code'],
             ));
-            $model->_load($item, $find);
+            $model->load($item, $find);
 
             $models[] = $model;
         }
@@ -405,11 +392,17 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return $models;
     }
 
-    protected function _gatherAdditionalItemsData(&$items, $params)
+    /**
+     * Rewrite if need
+     * 
+     * @param  array &$items Selected items
+     * @param  array $params Params
+     */
+    protected function gatherAdditionalItemsData(&$items, $params)
     {
     }
 
-    protected function _primaryAutoIncrement()
+    protected function primaryAutoIncrement()
     {
         return true;
     }
@@ -419,6 +412,26 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return 'asc';
     }
 
+    /**
+     * Ability to rewrite query parts. 
+     * 
+     * @param array  $params    Params
+     * @param array  $fields    Fields
+     * @param array  $sorting   Sorting
+     * @param array  $joins     Joins
+     * @param array  $condition Condition
+     * @param string $limit     Limit
+     */
+    public function prepareQuery(&$params, &$fields, &$sorting, &$joins, &$condition)
+    {
+    }
+
+    /**
+     * Setting extra conditions
+     * 
+     * @param  array $params Params
+     * @return array Conditions
+     */
     public function getExtraCondition($params)
     {
         return array();
@@ -438,7 +451,7 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
             $joins[] = db_quote(
                 " LEFT JOIN $description_table_name"
                 . " ON $description_table_name.$primary_field = $table_name.$primary_field"
-                . " AND $description_table_name.lang_code = ?s", $this->_lang_code
+                . " AND $description_table_name.lang_code = ?s", $this->params['lang_code']
             );
         }
 
@@ -464,7 +477,7 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
     // Events
 
-    public function beforeFind()
+    public function beforeFind(&$params)
     {
     }
 
@@ -488,61 +501,6 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
 
     public function afterDelete()
     {
-    }
-
-    public function enumElements($field_name)
-    {
-        if (empty(self::$_enum_elements[$field_name])) {
-            $column_info = db_get_row('SHOW COLUMNS FROM ?p WHERE Field = ?s', $this->getTableName(), $field_name);
-            
-            self::$_enum_elements[$field_name] = [];
-
-            if (
-                !empty($column_info)
-                && preg_match('/^(\w{3,4})\s?\((.+)\)/s', $column_info['Type'], $matches)
-                && in_array($matches[1], ['set', 'enum'])
-            ) {
-                $elements = explode(',', $matches[2]);
-
-                self::$_enum_elements[$field_name] = $this->trim($elements, "'");
-            }
-        }
-
-        return self::$_enum_elements[$field_name];
-    }
-
-    public function enumElementsLang($field_name, $prefix = '', $lang_code = DESCR_SL)
-    {
-        $elements = $this->enumElements($field_name);
-        $lang_elements = array();
-        foreach ($elements as $element) {
-            $lang_elements[$element] = __($prefix . $element, [], $lang_code);
-        }
-        
-        return $lang_elements;
-    }
-
-    public function getError()
-    {
-        return $this->_error;
-    }
-
-    public function setError($error)
-    {
-        $this->_error = $error;
-    }
-
-    protected function trim($str, $chars = null)
-    {
-        if (is_array($str)) {
-            foreach ($str as &$s) {
-                $s = $this->trim($s, $chars);
-            }
-        } else {
-            $str = trim($str, $chars);
-        }
-
-        return $str;
     }
 
 }

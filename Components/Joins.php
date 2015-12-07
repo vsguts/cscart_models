@@ -17,18 +17,16 @@ namespace Tygh\Models\Components;
 class Joins extends AComponent
 {
 
-    protected $_result;
-
-    protected function _prepare()
+    protected function prepare()
     {
-        $table_name = $this->_model->getTableName();
-        $this->_result = $this->_model->getJoins($this->_params);
+        $table_name = $this->model->getTableName();
+        $this->result = $this->model->getJoins($this->params);
     }
 
     public function get()
     {
-        if (!empty($this->_result)) {
-            return ' ' . implode(' ', $this->_result);
+        if (!empty($this->result)) {
+            return ' ' . implode(' ', $this->result);
         }
 
         return '';

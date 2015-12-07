@@ -37,7 +37,7 @@ interface IModel
 
     // Events
 
-    public function beforeFind();
+    public function beforeFind($params);
 
     public function afterFind();
 

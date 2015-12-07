@@ -17,39 +17,37 @@ namespace Tygh\Models\Components;
 class Limit extends AComponent
 {
 
-    protected $_result;
-
-    protected function _prepare()
+    protected function prepare()
     {
-        $table_name = $this->_model->getTableName();
-        $field = $this->_model->getPrimaryField();
+        $table_name = $this->model->getTableName();
+        $field = $this->model->getPrimaryField();
 
-        if (!empty($this->_params['items_per_page']) || !empty($this->_params['get_count'])) {
+        if (!empty($this->params['items_per_page']) || !empty($this->params['get_count'])) {
 
-            if (empty($this->_params['page'])) {
-                $this->_params['page'] = 1;
+            if (empty($this->params['page'])) {
+                $this->params['page'] = 1;
             }
 
-            $this->_params['total_items'] = db_get_field(
+            $this->params['total_items'] = db_get_field(
                 "SELECT COUNT(DISTINCT($table_name.$field))"
                 . " FROM $table_name"
-                . $this->_joins->get()
-                . $this->_condition->get()
+                . $this->joins->get()
+                . $this->condition->get()
             );
 
-            if (!empty($this->_params['items_per_page'])) {
-                $this->_result = db_paginate($this->_params['page'], $this->_params['items_per_page']);
+            if (!empty($this->params['items_per_page'])) {
+                $this->result = db_paginate($this->params['page'], $this->params['items_per_page']);
             }
         }
 
-        if (!empty($this->_params['limit'])) {
-            $this->_result = db_quote(' LIMIT 0, ?i', $this->_params['limit']);
+        if (!empty($this->params['limit'])) {
+            $this->result = db_quote(' LIMIT 0, ?i', $this->params['limit']);
         }
     }
 
     public function get()
     {
-        return $this->_result;
+        return $this->result;
     }
 
 }

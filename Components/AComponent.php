@@ -19,23 +19,32 @@ use Tygh\Models\IModel;
 abstract class AComponent
 {
 
-    protected $_model;
-    protected $_params;
-    protected $_joins;
-    protected $_condition;
+    public $result = array();
+
+    protected $model;
+    protected $params;
+    protected $joins;
+    protected $condition;
 
     public function __construct(IModel $model, Array &$params, $joins = array(), $condition = array())
     {
-        $this->_model = $model;
-        $this->_params = &$params;
-        $this->_joins = $joins;
-        $this->_condition = $condition;
+        $this->model     = $model;
+        $this->params    = &$params;
+        $this->joins     = $joins;
+        $this->condition = $condition;
 
-        $this->_prepare();
+        $this->prepare();
     }
 
-    abstract protected function _prepare();
+    /**
+     * Preparing result
+     */
+    abstract public function prepare();
 
-    abstract protected function get();
+    /**
+     * Getting result with convertion to string
+     * @return array
+     */
+    abstract public function get();
 
 }

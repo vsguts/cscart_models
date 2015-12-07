@@ -17,43 +17,41 @@ namespace Tygh\Models\Components;
 class Sorting extends AComponent
 {
 
-    protected $_result;
-
-    protected $_directions = array(
+    protected $directions = array(
         'asc' => 'asc',
         'desc' => 'desc',
     );
 
-    public function _prepare()
+    public function prepare()
     {
-        $sort_fields = $this->_model->getSortFields();
+        $sort_fields = $this->model->getSortFields();
 
-        if (empty($this->_params['sort_by']) || empty($sort_fields[$this->_params['sort_by']])) {
-            $this->_params['sort_by'] = key($sort_fields);
+        if (empty($this->params['sort_by']) || empty($sort_fields[$this->params['sort_by']])) {
+            $this->params['sort_by'] = key($sort_fields);
         }
 
-        if (empty($this->_params['sort_order']) || empty($this->_directions[$this->_params['sort_order']])) {
-            $default_direction = $this->_model->getSortDefaultDirection();
-            $this->_params['sort_order'] = !empty($default_direction) ? $default_direction : key($this->_directions);
+        if (empty($this->params['sort_order']) || empty($this->directions[$this->params['sort_order']])) {
+            $default_direction = $this->model->getSortDefaultDirection();
+            $this->params['sort_order'] = !empty($default_direction) ? $default_direction : key($this->directions);
         }
 
-        $sorting = $sort_fields[$this->_params['sort_by']];
+        $sorting = $sort_fields[$this->params['sort_by']];
         if (is_array($sorting)) {
-            $sorting = implode(' ' . $this->_directions[$this->_params['sort_order']] . ', ', $sorting);
+            $sorting = implode(' ' . $this->directions[$this->params['sort_order']] . ', ', $sorting);
         }
 
         if (!empty($sorting)) {
-            $sorting .= ' ' . $this->_directions[$this->_params['sort_order']];
-            $this->_params['sort_order_rev'] = $this->_params['sort_order'] == 'asc' ? 'desc' : 'asc';
+            $sorting .= ' ' . $this->directions[$this->params['sort_order']];
+            $this->params['sort_order_rev'] = $this->params['sort_order'] == 'asc' ? 'desc' : 'asc';
         }
 
-        $this->_result = $sorting;
+        $this->result = $sorting;
     }
 
     public function get()
     {
-        if (!empty($this->_result)) {
-            return ' ORDER BY ' . $this->_result;
+        if (!empty($this->result)) {
+            return ' ORDER BY ' . $this->result;
         }
 
         return '';

@@ -93,9 +93,9 @@ class License extends AModel
     }
 ```
 
-Если мы используем таблицу без автоинкрементного поля, то нужно в модели переопределить метод _primaryAutoIncrement, таким образом, чтобы он возвращал false:
+Если мы используем таблицу без автоинкрементного поля, то нужно в модели переопределить метод primaryAutoIncrement, таким образом, чтобы он возвращал false:
 ```php
-    protected function _primaryAutoIncrement()
+    protected function primaryAutoIncrement()
     {
         return false;
     }
@@ -131,7 +131,7 @@ class License extends AModel
 
 Если нам нужно после выборки подгрузить дополнительные данные, то это можно сделать так:
 ```php
-    protected function _gatherAdditionalItemsData(&$items, $params)
+    protected function gatherAdditionalItemsData(&$items, $params)
     {
         foreach ($items as &$item) {
             $item['name_extended'] = sprintf("%s (%s, %s)",

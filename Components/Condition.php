@@ -17,33 +17,31 @@ namespace Tygh\Models\Components;
 class Condition extends AComponent
 {
 
-    protected $_result = array();
-
-    protected function _prepare()
+    protected function prepare()
     {
         $condition = array();
-        $table_name = $this->_model->getTableName();
-        $search_fields = $this->_model->getSearchFields();
-        $primary_field = $this->_model->getPrimaryField();
+        $table_name = $this->model->getTableName();
+        $search_fields = $this->model->getSearchFields();
+        $primary_field = $this->model->getPrimaryField();
 
-        if (isset($this->_params['ids'])) {
-            $condition[] = db_quote("$table_name.$primary_field IN(?a)", (array) $this->_params['ids']);
+        if (isset($this->params['ids'])) {
+            $condition[] = db_quote("$table_name.$primary_field IN(?a)", (array) $this->params['ids']);
         }
 
-        if (isset($this->_params['not_ids'])) {
-            $condition[] = db_quote("$table_name.$primary_field NOT IN(?a)", (array) $this->_params['not_ids']);
+        if (isset($this->params['not_ids'])) {
+            $condition[] = db_quote("$table_name.$primary_field NOT IN(?a)", (array) $this->params['not_ids']);
         }
 
         if (!empty($search_fields['number'])) {
             foreach ($search_fields['number'] as $_key => $_field) {
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
-                if (isset($this->_params[$param]) && fn_string_not_empty($this->_params[$param])) {
+                if (isset($this->params[$param]) && fn_string_not_empty($this->params[$param])) {
                     $sub_condition = array();
                     foreach ($fields as $field) {
-                        $sub_condition[] = db_quote("$field = ?i", $this->_params[$param]);
+                        $sub_condition[] = db_quote("$field = ?i", $this->params[$param]);
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 }
             }
         }
@@ -57,12 +55,14 @@ class Condition extends AComponent
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
                 foreach ($ranges as $_range_name => $_range_symbol) {
-                    if (!empty($this->_params[$param . '_' . $_range_name])) {
+                    if (!empty($this->params[$param . '_' . $_range_name])) {
                         $sub_condition = array();
                         foreach ($fields as $field) {
-                            $sub_condition[] = db_quote("$field ?p ?i", $_range_symbol, $this->_params[$param . '_' . $_range_name]);
+                            $sub_condition[] = db_quote(
+                                "$field ?p ?i", $_range_symbol, $this->params[$param . '_' . $_range_name]
+                            );
                         }
-                        $condition[] = $this->_mixSubConditions($sub_condition);
+                        $condition[] = $this->mixSubConditions($sub_condition);
                     }
                 }
             }
@@ -72,13 +72,15 @@ class Condition extends AComponent
             foreach ($search_fields['in'] as $_key => $_field) {
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
-                if (!empty($this->_params[$param])) {
-                    $_in_values = !is_array($this->_params[$param]) ? explode(',', $this->_params[$param]) : $this->_params[$param];
+                if (!empty($this->params[$param])) {
+                    $_in_values = !is_array($this->params[$param])
+                        ? explode(',', $this->params[$param])
+                        : $this->params[$param];
                     $sub_condition = array();
                     foreach ($fields as $field) {
                         $sub_condition[] = db_quote("$field IN(?a)", $_in_values);
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 }
             }
         }
@@ -87,13 +89,15 @@ class Condition extends AComponent
             foreach ($search_fields['not_in'] as $_key => $_field) {
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
-                if (!empty($this->_params[$param])) {
-                    $_in_values = !is_array($this->_params[$param]) ? explode(',', $this->_params[$param]) : $this->_params[$param];
+                if (!empty($this->params[$param])) {
+                    $_in_values = !is_array($this->params[$param])
+                        ? explode(',', $this->params[$param])
+                        : $this->params[$param];
                     $sub_condition = array();
                     foreach ($fields as $field) {
                         $sub_condition[] = db_quote("$field NOT IN(?a)", $_in_values);
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 }
             }
         }
@@ -102,12 +106,12 @@ class Condition extends AComponent
             foreach ($search_fields['string'] as $_key => $_field) {
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
-                if (isset($this->_params[$param]) && fn_string_not_empty($this->_params[$param])) {
+                if (isset($this->params[$param]) && fn_string_not_empty($this->params[$param])) {
                     $sub_condition = array();
                     foreach ($fields as $field) {
-                        $sub_condition[] = db_quote("$field LIKE ?s", trim($this->_params[$param]));
+                        $sub_condition[] = db_quote("$field LIKE ?s", trim($this->params[$param]));
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 }
             }
         }
@@ -116,13 +120,13 @@ class Condition extends AComponent
             foreach ($search_fields['text'] as $_key => $_field) {
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
-                if (isset($this->_params[$param]) && fn_string_not_empty($this->_params[$param])) {
+                if (isset($this->params[$param]) && fn_string_not_empty($this->params[$param])) {
                     $sub_condition = array();
-                    $like = '%' . trim($this->_params[$param]) . '%';
+                    $like = '%' . trim($this->params[$param]) . '%';
                     foreach ($fields as $field) {
                         $sub_condition[] = db_quote("$field LIKE ?l", $like);
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 }
             }
         }
@@ -136,9 +140,9 @@ class Condition extends AComponent
                 $param = !is_numeric($_key) ? $_key : $_field;
                 $fields = (array) $_field;
 
-                $period = !empty($this->_params[$param . 'period']) ? $this->_params[$param . 'period'] : null;
-                $from = !empty($this->_params[$param . 'time_from']) ? $this->_params[$param . 'time_from'] : 0;
-                $to = !empty($this->_params[$param . 'time_to']) ? $this->_params[$param . 'time_to'] : 0;
+                $period = !empty($this->params[$param . 'period']) ? $this->params[$param . 'period'] : null;
+                $from = !empty($this->params[$param . 'time_from']) ? $this->params[$param . 'time_from'] : 0;
+                $to = !empty($this->params[$param . 'time_to']) ? $this->params[$param . 'time_to'] : 0;
 
                 if (!empty($from) || !empty($to)) {
                     list($from, $to) = fn_create_periods(array(
@@ -153,39 +157,39 @@ class Condition extends AComponent
                             $from, $to
                         );
                     }
-                    $condition[] = $this->_mixSubConditions($sub_condition);
+                    $condition[] = $this->mixSubConditions($sub_condition);
                 } else {
-                    if (!empty($this->_params[$param . '_from'])) {
+                    if (!empty($this->params[$param . '_from'])) {
                         $sub_condition = array();
                         foreach ($fields as $field) {
-                            $sub_condition[] = db_quote("$field >= ?i", $this->_params[$param . '_from']);
+                            $sub_condition[] = db_quote("$field >= ?i", $this->params[$param . '_from']);
                         }
-                        $condition[] = $this->_mixSubConditions($sub_condition);
+                        $condition[] = $this->mixSubConditions($sub_condition);
                     }
-                    if (!empty($this->_params[$param . '_to'])) {
+                    if (!empty($this->params[$param . '_to'])) {
                         $sub_condition = array();
                         foreach ($fields as $field) {
-                            $sub_condition[] = db_quote("$field <= ?i", $this->_params[$param . '_to']);
+                            $sub_condition[] = db_quote("$field <= ?i", $this->params[$param . '_to']);
                         }
-                        $condition[] = $this->_mixSubConditions($sub_condition);
+                        $condition[] = $this->mixSubConditions($sub_condition);
                     }
                 }
             }
         }
 
-        $this->_result = array_filter(array_merge($condition, (array) $this->_model->getExtraCondition($this->_params)));
+        $this->result = array_filter(array_merge($condition, (array) $this->model->getExtraCondition($this->params)));
     }
 
     public function get()
     {
-        if (!empty($this->_result)) {
-            return ' WHERE ' . implode(' AND ', $this->_result);
+        if (!empty($this->result)) {
+            return ' WHERE ' . implode(' AND ', $this->result);
         }
 
         return '';
     }
 
-    protected function _mixSubConditions($sub_condition)
+    protected function mixSubConditions($sub_condition)
     {
         if (count($sub_condition) > 1) {
             return '(' . implode(' OR ', $sub_condition) . ')';
