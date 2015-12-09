@@ -17,7 +17,7 @@ namespace Tygh\Models\Components;
 class Sorting extends AComponent
 {
 
-    protected $directions = array(
+    public $directions = array(
         'asc' => 'asc',
         'desc' => 'desc',
     );

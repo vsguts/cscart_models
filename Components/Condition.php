@@ -17,7 +17,7 @@ namespace Tygh\Models\Components;
 class Condition extends AComponent
 {
 
-    protected function prepare()
+    public function prepare()
     {
         $condition = array();
         $table_name = $this->model->getTableName();

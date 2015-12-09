@@ -17,8 +17,10 @@ namespace Tygh\Models\Components;
 class Limit extends AComponent
 {
 
-    protected function prepare()
+    public function prepare()
     {
+        $this->result = '';
+        
         $table_name = $this->model->getTableName();
         $field = $this->model->getPrimaryField();
 

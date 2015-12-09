@@ -17,7 +17,7 @@ namespace Tygh\Models\Components;
 class Joins extends AComponent
 {
 
-    protected function prepare()
+    public function prepare()
     {
         $table_name = $this->model->getTableName();
         $this->result = $this->model->getJoins($this->params);

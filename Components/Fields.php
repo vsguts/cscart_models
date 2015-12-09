@@ -17,7 +17,7 @@ namespace Tygh\Models\Components;
 class Fields extends AComponent
 {
 
-    protected function prepare()
+    public function prepare()
     {
         $this->result = $this->model->getFields($this->params);
     }

@@ -234,8 +234,6 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         if ($this->beforeSave()) {
             $result = $this->isNewRecord() ? $this->insert() : $this->update();
 
-            $this->unlockTables();
-
             $this->load($this->find($this->id));
 
             $this->afterSave();
@@ -393,20 +391,33 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
     }
 
     /**
-     * Rewrite if need
-     * 
-     * @param  array &$items Selected items
-     * @param  array $params Params
+     * Setting DB table name
+     * @return str
      */
-    protected function gatherAdditionalItemsData(&$items, $params)
+    abstract public function getTableName();
+
+    /**
+     * Setting DB table name of related multi-lamguage data.
+     * @return str
+     */
+    public function getDescriptionTableName()
     {
+        return '';
     }
 
+    /**
+     * Autoincrement enabled?
+     * @return bool
+     */
     protected function primaryAutoIncrement()
     {
         return true;
     }
 
+    /**
+     * Getting default sort directino.
+     * @return str asc or desc
+     */
     public function getSortDefaultDirection()
     {
         return 'asc';
@@ -437,6 +448,21 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return array();
     }
 
+    /**
+     * Gather additional items data. Items modified by link.
+     * 
+     * @param  array &$items Selected items
+     * @param  array $params Params
+     */
+    protected function gatherAdditionalItemsData(&$items, $params)
+    {
+    }
+
+    /**
+     * Getting query joins
+     * @param  array $params params
+     * @return array
+     */
     public function getJoins($params)
     {
         $joins = array();
@@ -458,6 +484,15 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
         return $joins;
     }
 
+    /**
+     * Getting search fields schema. Available keys: number, range, in, not_in, string, text, time. For more info see: Condition::prepare()
+     * @return array
+     */
+    public function getSearchFields()
+    {
+        return array();
+    }
+
     public function getSortFields()
     {
         return array(
@@ -468,11 +503,6 @@ abstract class AModel implements IModel, \IteratorAggregate, \ArrayAccess
     public function getLastViewObjectName()
     {
         return false; // disabled by default
-    }
-
-    public function getDescriptionTableName()
-    {
-        return '';
     }
 
     // Events
