@@ -16,7 +16,7 @@ namespace Tygh\Models;
 
 use Tygh\Registry;
 
-class Partner extends AModel
+class PartnerExample extends AModel
 {
     public function getTableName()
     {
